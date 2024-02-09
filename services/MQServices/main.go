@@ -63,7 +63,7 @@ func (mq *MQInstance) PublishMessage(message string) {
 	log.Printf(" [x] Sent %s\n", message)
 }
 
-func (mq *MQInstance) ConsumeMessages() {
+func (mq *MQInstance) ConsumeMessages(callback func([]byte)) {
 	msgs, err := mq.channel.Consume(
 		mq.queue.Name, // queue
 		"",            // consumer
@@ -80,6 +80,7 @@ func (mq *MQInstance) ConsumeMessages() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
+			callback(d.Body)
 		}
 	}()
 

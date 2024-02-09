@@ -14,6 +14,11 @@ type TaskExecution struct {
 	MQInstance *mq.MQInstance
 }
 
+type TaskExecutionMetadata struct {
+	TaskName string
+	Args     []interface{}
+}
+
 func TaskExecutionInit() *TaskExecution {
 	taskExecution := &TaskExecution{}
 	taskExecution.MQInstance = mq.MQInstanceInit()
@@ -31,7 +36,14 @@ func (taskExecution *TaskExecution) Task(fn interface{}, args ...interface{}) (e
 		return fmt.Errorf("expected a function, got %T", fn)
 	}
 
-	taskExecution.MQInstance.PublishMessage(strings.Split(taskName, ".")[1])
+	taskExecutionMetadata := TaskExecutionMetadata{
+		TaskName: strings.Split(taskName, ".")[1],
+		Args:     args,
+	}
+
+	taskExecutionMetadataString := fmt.Sprintf("%+v", taskExecutionMetadata)
+
+	taskExecution.MQInstance.PublishMessage(taskExecutionMetadataString)
 	return nil
 }
 
