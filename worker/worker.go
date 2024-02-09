@@ -1,25 +1,30 @@
-package worker
+package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	mq "scheduler/services/MQServices"
 	taskExecution "scheduler/services/WorkQueueServices"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func worker() {
+func main() {
 	mqInstance := mq.MQInstanceInit()
 	mqInstance.ConnectQueue("tasks")
+	executionInstance := taskExecution.TaskExecution{}
 
-	mq.MQInstanceInit().ConsumeMessages(func(bytes []byte) {
+	defer mqInstance.CleanUp()
+
+	mqInstance.ConsumeMessages(func(bytes []byte) {
 		taskExecutionMetadata := taskExecution.TaskExecutionMetadata{}
-		err := json.Unmarshal(bytes, &taskExecutionMetadata)
+		err := bson.Unmarshal(bytes, &taskExecutionMetadata)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON: %s", err)
 			return
 		}
 
 		fmt.Println("Received task: ", taskExecutionMetadata.TaskName)
+		fmt.Println(executionInstance.Execute(taskExecutionMetadata.TaskName, taskExecutionMetadata.Args...))
 	})
 }

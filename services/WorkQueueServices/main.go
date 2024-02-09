@@ -8,6 +8,8 @@ import (
 
 	mq "scheduler/services/MQServices"
 	tasklets "scheduler/tasklets"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type TaskExecution struct {
@@ -15,18 +17,19 @@ type TaskExecution struct {
 }
 
 type TaskExecutionMetadata struct {
-	TaskName string
-	Args     []interface{}
+	TaskName string        `json:"TaskName"`
+	Args     []interface{} `json:"Args"`
 }
 
 func TaskExecutionInit() *TaskExecution {
 	taskExecution := &TaskExecution{}
 	taskExecution.MQInstance = mq.MQInstanceInit()
 	taskExecution.MQInstance.ConnectQueue("tasks")
+
 	return taskExecution
 }
 
-func (taskExecution *TaskExecution) Task(fn interface{}, args ...interface{}) (err error) {
+func (taskExecution *TaskExecution) Enqueue(fn interface{}, args ...interface{}) (err error) {
 	fnVal := reflect.ValueOf(fn)
 
 	taskName := runtime.FuncForPC(fnVal.Pointer()).Name()
@@ -41,9 +44,11 @@ func (taskExecution *TaskExecution) Task(fn interface{}, args ...interface{}) (e
 		Args:     args,
 	}
 
-	taskExecutionMetadataString := fmt.Sprintf("%+v", taskExecutionMetadata)
-
-	taskExecution.MQInstance.PublishMessage(taskExecutionMetadataString)
+	taskExecutionMetadataBytes, err := bson.Marshal(taskExecutionMetadata)
+	if err != nil {
+		return err
+	}
+	taskExecution.MQInstance.PublishMessage(taskExecutionMetadataBytes)
 	return nil
 }
 

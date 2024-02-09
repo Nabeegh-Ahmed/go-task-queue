@@ -46,7 +46,7 @@ func (mq *MQInstance) ConnectQueue(queueName string) {
 	mq.queue = q
 }
 
-func (mq *MQInstance) PublishMessage(message string) {
+func (mq *MQInstance) PublishMessage(message []byte) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -57,7 +57,7 @@ func (mq *MQInstance) PublishMessage(message string) {
 		false,         // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(message),
+			Body:        message,
 		})
 	failOnError(err, "Failed to publish a message")
 	log.Printf(" [x] Sent %s\n", message)
