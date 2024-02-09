@@ -1,4 +1,4 @@
-package main
+package worker
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func main() {
+func Worker() {
 	mqInstance := mq.MQInstanceInit()
 	mqInstance.ConnectQueue("tasks")
 	executionInstance := taskExecution.TaskExecution{}
