@@ -14,7 +14,17 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func ConnectQueue(queueName string) (*amqp.Connection, *amqp.Channel, amqp.Queue) {
+type MQInstance struct {
+	connection *amqp.Connection
+	channel    *amqp.Channel
+	queue      amqp.Queue
+}
+
+func MQInstanceInit() *MQInstance {
+	return &MQInstance{}
+}
+
+func (mq *MQInstance) ConnectQueue(queueName string) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 
@@ -31,19 +41,20 @@ func ConnectQueue(queueName string) (*amqp.Connection, *amqp.Channel, amqp.Queue
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	return conn, ch, q
-
+	mq.connection = conn
+	mq.channel = ch
+	mq.queue = q
 }
 
-func PublishMessage(channel *amqp.Channel, queue amqp.Queue, message string) {
+func (mq *MQInstance) PublishMessage(message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := channel.PublishWithContext(ctx,
-		"",         // exchange
-		queue.Name, // routing key
-		false,      // mandatory
-		false,      // immediate
+	err := mq.channel.PublishWithContext(ctx,
+		"",            // exchange
+		mq.queue.Name, // routing key
+		false,         // mandatory
+		false,         // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(message),
@@ -52,15 +63,15 @@ func PublishMessage(channel *amqp.Channel, queue amqp.Queue, message string) {
 	log.Printf(" [x] Sent %s\n", message)
 }
 
-func ConsumeMessages(channel *amqp.Channel, queue amqp.Queue) {
-	msgs, err := channel.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		true,       // auto-ack
-		false,      // exclusive
-		false,      // no-local
-		false,      // no-wait
-		nil,        // args
+func (mq *MQInstance) ConsumeMessages() {
+	msgs, err := mq.channel.Consume(
+		mq.queue.Name, // queue
+		"",            // consumer
+		true,          // auto-ack
+		false,         // exclusive
+		false,         // no-local
+		false,         // no-wait
+		nil,           // args
 	)
 	failOnError(err, "Failed to register a consumer")
 
@@ -76,6 +87,6 @@ func ConsumeMessages(channel *amqp.Channel, queue amqp.Queue) {
 	<-forever
 }
 
-func CleanUp(conn *amqp.Connection, channel *amqp.Channel, queue amqp.Queue) {
-	channel.Close()
+func (mq *MQInstance) CleanUp() {
+	mq.channel.Close()
 }
