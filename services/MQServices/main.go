@@ -52,7 +52,7 @@ func PublishMessage(channel *amqp.Channel, queue amqp.Queue, message string) {
 	log.Printf(" [x] Sent %s\n", message)
 }
 
-func ConsumeMessage(channel *amqp.Channel, queue amqp.Queue) {
+func ConsumeMessages(channel *amqp.Channel, queue amqp.Queue) {
 	msgs, err := channel.Consume(
 		queue.Name, // queue
 		"",         // consumer
